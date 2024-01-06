@@ -4,6 +4,8 @@ motion_blur_adversarial_attack 是一个开源的模糊对抗样本攻击的代�
 ## Quick Start
 1 下载网络权重，并放到项目主目录下。  
 [google] https://drive.google.com/drive/folders/1U_ki1KI8DBquyZgNg3pRT1k9kXJEaxgM?usp=drive_link  
+[baidu] 链接：https://pan.baidu.com/s/1Sa8MvbYu3EPj9Vi4Z7L6iw  
+提取码：J3Z1  
 
 2 运动模糊图像生成
 ```
