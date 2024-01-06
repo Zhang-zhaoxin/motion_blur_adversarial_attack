@@ -1,6 +1,6 @@
 # motion_blur_adversarial_attack
 ## Introduction
-motion_blur_adversarial_attack 是一个开源的模糊对抗样本攻击的代码。
+motion_blur_adversarial_attack 是一个运动模糊伪装对抗样本生成方法的测试代码。
 ## Quick Start
 1 下载网络权重，并放到项目主目录下。  
 [google] https://drive.google.com/drive/folders/1U_ki1KI8DBquyZgNg3pRT1k9kXJEaxgM?usp=drive_link  
