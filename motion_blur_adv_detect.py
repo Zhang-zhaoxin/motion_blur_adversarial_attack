@@ -177,84 +177,8 @@ class Yolo4(object):
             del draw
 
         end = timer()
-        # print(end - start)
         return image
 
-
-    def Attack(self, image, count, jpgfile, model_image_size=(608, 608)):
-        # sess = K.get_session()
-        global graph
-        ori_image = image # 扰动截取之用
-        pixdata_1 = ori_image.load()
-        
-        boxed_image, w, h, nw, nh, iw, ih = letterbox_image(image, tuple(reversed(model_image_size)))
-        image_data = np.array(boxed_image, dtype='float32')
-        image_data /= 255.
-        image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
-        original_image = np.copy(image_data)
-        # with graph.as_default():
-        object_hack = 2  # 该参数为要攻击的目标类别
-        A = self.classes >= object_hack
-        B = self.classes <= object_hack
-        hack_scores = tf.boolean_mask(self.scores, A & B)
-        cost_function = tf.reduce_sum(self.scores)  # 跑通代码(全部目标攻击为隐身)
-        print("cost_function:{}".format(cost_function))
-        gradient_function = K.gradients(cost_function, self.yolo4_model.input)[0]
-        cost = 1
-        e = 5 / 255
-        n = 0
-        ne = 0
-        eps = 0.05
-        index = 0
-        # 最大改变幅度
-        max_change_above = original_image + 0.1
-        max_change_below = original_image - 0.1
-        # 初始化梯度
-        pre_g = np.zeros(image_data.shape)
-        D = np.zeros(image_data.shape)
-        data_adv = np.zeros(image_data.shape)
-        gradients_m = np.zeros(image_data.shape)
-        # 主要攻击循环
-        while cost > 0.002:
-        # for i in range(0, 10):
-            img = image_data[0]
-            img *= 255. 
-            im = Image.fromarray(img.astype(np.uint8))
-            im = letterbox_image_1(im, w, h, nw, nh)
-            im = im.resize((iw, ih), Image.BICUBIC) # 填充图像
-                            
-            im.save(os.path.join("output/blur_adv_image", os.path.basename(jpgfile)))
-            # 再次打开图片
-            im = Image.open(os.path.join("output/blur_adv_image", os.path.basename(jpgfile)))
-            
-            im, w, h, nw, nh, iw, ih = letterbox_image(im, tuple(reversed(model_image_size)))
-
-            image_data = np.array(im, dtype='float32')
-            image_data /= 255.
-            image_data = np.expand_dims(image_data, 0)
-            # 计算梯度
-            # with graph.as_default():
-            cost, gradients, out_classes, out_boxes = self.sess.run(
-                [cost_function, gradient_function, self.classes, self.boxes],
-                feed_dict={
-                    self.yolo4_model.input: image_data,
-                    self.input_image_shape: [image.size[1], image.size[0]],
-                    K.learning_phase(): 0
-                })
-            print("batch:{} Cost: {:.8}".format(index, cost))
-
-            # 计算对抗噪声
-            pre_n = np.sign(pre_g)
-            g = gradients / np.linalg.norm(gradients, ord=1, axis=2)
-            n = np.sign(g)
-            pre_g = g
-            image_data -= (pre_n * e + n * e)
-            image_data = np.clip(image_data, 0, 1.0)
-
-            index += 1
-            if cost < 0.002:
-                break
-        return 0
 
 if __name__ == '__main__':
     model_path = 'yolo4_weight.h5'
@@ -265,20 +189,6 @@ if __name__ == '__main__':
     iou = 0.5
     model_image_size = (608, 608)
 
-
-    # import glob
-    # count = 0
-    # path = "output/blur_images/*.jpg"
-    # for jpgfile in glob.glob(path):
-        # yolo4_model = Yolo4(score, iou, anchors_path, classes_path, model_path)
-        # img = Image.open(jpgfile)
-        # result = yolo4_model.Attack(img, count, jpgfile, model_image_size=model_image_size)
-        # count += 1
-        # print(count)
-        # K.clear_session()  # 将动态图进行清除，否则节点增多增大内存消耗并且程序报错
-    # yolo4_model.close_session()
-    
-    
     import glob
     path = "output/blur_adv_image/*.jpg"
     outdir = "output/result/"+str(score)

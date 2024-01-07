@@ -116,7 +116,7 @@ class Yolo4(object):
     def close_session(self):
         self.sess.close()
 
-    def detect_image(self, image,box_0,box_025,box_05,sc_025,sc_05,model_image_size=(608, 608)):
+    def detect_image(self, image, model_image_size=(608, 608)):
         start = timer()
 
         boxed_image, w, h, nw, nh, iw, ih = letterbox_image(image, tuple(reversed(model_image_size)))
@@ -134,14 +134,6 @@ class Yolo4(object):
                 K.learning_phase(): 0
             })
         print(out_boxes, out_scores, out_classes)
-
-        # for i in range(len(out_boxes)):
-        #     box_ct+=1
-        #     if out_scores[i]>=0.25:
-        #         sc_025+=1
-        #     if out_scores[i]>=0.5:
-        #         sc_05+=1
-
         print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
 
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
@@ -154,30 +146,11 @@ class Yolo4(object):
             predicted_class = self.class_names[c]
             box = out_boxes[i]
             score = out_scores[i]
-            # all_score.append(score)
-
-            box_0+=1
-            if score>=0.25:
-                sc_025+=score
-                box_025+=1
-            if score>=0.5:
-                sc_05+=score
-                box_05+=1
-
-            
             label = '{} {:.2f}'.format(predicted_class, score)
             draw = ImageDraw.Draw(image)
             label_size = draw.textsize(label, font)
             
             top, left, bottom, right = box
-            if 0 <= c <= 5:
-                with open('train.txt', 'a', encoding='utf-8') as f:
-                    f.write(str("{:.0f},{:.0f},{:.0f},{:.0f},{:.0f}".format(left, top, right, bottom, c)) + ' ')
-            if c==7:
-                c_1 = c - 1
-                with open('train.txt', 'a', encoding='utf-8') as f:
-                    f.write(str("{:.0f},{:.0f},{:.0f},{:.0f},{:.0f}".format(left, top, right, bottom, c_1)) + ' ')
-                
             top = max(0, np.floor(top + 0.5).astype('int32'))
             left = max(0, np.floor(left + 0.5).astype('int32'))
             bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
@@ -199,50 +172,29 @@ class Yolo4(object):
                 fill=self.colors[c])
             draw.text(text_origin, label, fill=(0, 0, 0), font=font)
             del draw
-        # b = len(all_score)
-        # total = 0
-        # for ele in range(0, b):
-        # total = total + all_score[ele]
-        # average = total / b
 
         end = timer()
-        # print(end - start)
-        return image,box_0,box_025,box_05,sc_025,sc_05
+        return image
 
 
     def Attack(self, image, count, jpgfile, model_image_size=(608, 608)):
         # sess = K.get_session()
         global graph
-        ori_image = image # 扰动截取之用
-        pixdata_1 = ori_image.load()
-        
         boxed_image, w, h, nw, nh, iw, ih = letterbox_image(image, tuple(reversed(model_image_size)))
         image_data = np.array(boxed_image, dtype='float32')
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
         original_image = np.copy(image_data)
-        # with graph.as_default():
-        object_hack = 2  # 该参数为要攻击的目标类别
-        A = self.classes >= object_hack
-        B = self.classes <= object_hack
-        hack_scores = tf.boolean_mask(self.scores, A & B)
-        cost_function = tf.reduce_sum(self.scores)  # 跑通代码(全部目标攻击为隐身)
+        cost_function = tf.reduce_sum(self.scores)
         print("cost_function:{}".format(cost_function))
         gradient_function = K.gradients(cost_function, self.yolo4_model.input)[0]
         cost = 1
         e = 5 / 255
         n = 0
-        ne = 0
-        eps = 0.05
         index = 0
         # 最大改变幅度
         max_change_above = original_image + 0.1
         max_change_below = original_image - 0.1
-        # 初始化梯度
-        pre_g = np.zeros(image_data.shape)
-        D = np.zeros(image_data.shape)
-        data_adv = np.zeros(image_data.shape)
-        gradients_m = np.zeros(image_data.shape)
         # 主要攻击循环
         while cost > 0.002:
         # for i in range(0, 10):
@@ -273,11 +225,9 @@ class Yolo4(object):
             print("batch:{} Cost: {:.8}".format(index, cost))
 
             # 计算对抗噪声
-            pre_n = np.sign(pre_g)
-            g = gradients
-            n = np.sign(g)
-            pre_g = g
-            image_data -= (pre_n * e + n * e)
+            n = np.sign(gradients)
+            image_data -= n * e
+            image_data = np.clip(image_data, max_change_below, max_change_above)
             image_data = np.clip(image_data, 0, 1.0)
 
             index += 1
