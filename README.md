@@ -9,13 +9,13 @@ motion_blur_adversarial_attack 是一个运动模糊伪装对抗样本生成方�
 
 2 运动模糊图像生成
 ```
-  python motion_blur_img.py
+python motion_blur_img.py
 ```
 3 运动模糊图像对抗攻击
 ```
-  python motion_blur_adv_attack.py
+python motion_blur_adv_attack.py
 ```
 4 运动模糊图像对抗攻击检测
 ```
-  python motion_blur_adv_detect.py
+python motion_blur_adv_detect.py
 ```
